@@ -15,7 +15,7 @@ about traffic lights or obstacles.
 
 Once you have created dbw_node, you will update this node to use the status of traffic lights too.
 
-Please note that our simulator also provdides the exact location of traffic lights and their
+Please note that our simulator also provides the exact location of traffic lights and their
 current status in `/vehicle/traffic_lights` message. You can use this message to build this node
 as well as to verify your TL classifier.
 
@@ -44,11 +44,9 @@ class WaypointUpdater(object):
 	self.waypoints_2d = None
 	self.waypoint_tree = None
 
-	self.loop()
-
-        # rospy.spin()
+	self.periodically_publish_waypoints()
     
-    def loop(self):
+    def periodically_publish_waypoints(self):
         rate = rospy.Rate(50)
 	while not rospy.is_shutdown():
 		if self.pose and self.base_waypoints:
