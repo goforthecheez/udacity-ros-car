@@ -54,7 +54,8 @@ class DBWNode(object):
                                          BrakeCmd, queue_size=1)
 
         self.dbw_enabled = False
-        self.twist = 0
+        self.twist = None
+        self.current_velocity = None
 
         # TODO: Create `Controller` object
         self.controller = Controller()
@@ -62,6 +63,7 @@ class DBWNode(object):
         # TODO: Subscribe to all the topics you need to
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
         self.loop()
 
@@ -119,6 +121,12 @@ class DBWNode(object):
     def dbw_enabled_cb(self, is_enabled):
         rospy.logwarn('CB dbw_enabled=%s', is_enabled.data)
         self.dbw_enabled = is_enabled.data
+
+    def current_velocity_cb(self, msg):
+        """
+        :param msg:  geometry_msgs/TwistStamped
+        """
+        self.current_velocity = msg.twist.linear
 
 if __name__ == '__main__':
     DBWNode()
