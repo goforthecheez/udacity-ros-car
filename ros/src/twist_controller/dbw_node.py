@@ -77,10 +77,10 @@ class DBWNode(object):
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
             if self.dbw_enabled:
-              self.publish(throttle, brake, steer)
+                self.publish_controls(throttle, brake, steer)
             rate.sleep()
 
-    def publish(self, throttle, brake, steer):
+    def publish_controls(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
         tcmd.enable = True
         tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
@@ -98,6 +98,8 @@ class DBWNode(object):
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
+    # ######### Callback functions ############
+
     def twist_cb(self, msg):
         """
 
@@ -111,11 +113,12 @@ class DBWNode(object):
                 float64 y
                 float64 z
         """
-        self.twist = msg.twist.linear.x
+        self.twist = msg.twist.linear
+        # rospy.logwarn('CB twist=%s', msg.twist.linear)
 
     def dbw_enabled_cb(self, is_enabled):
-        rospy.logwarn('CB dbw_enabled=', is_enabled)
-        self.dbw_enabled = is_enabled
+        rospy.logwarn('CB dbw_enabled=%s', is_enabled.data)
+        self.dbw_enabled = is_enabled.data
 
 if __name__ == '__main__':
     DBWNode()
