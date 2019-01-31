@@ -124,7 +124,7 @@ class TLDetector(object):
 
         min_idx = -1
         min_dist = sys.float_info.max
-        for idx, light in enumerate(self.lights)
+        for idx, light in enumerate(self.lights):
             dist = distance(pose, light.pose.pose)
             if dist < min_dist:
                 min_dist = dist
