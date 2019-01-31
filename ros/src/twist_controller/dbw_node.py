@@ -53,10 +53,15 @@ class DBWNode(object):
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',
                                          BrakeCmd, queue_size=1)
 
+        self.dbw_enabled = False
+        self.twist = 0
+
         # TODO: Create `Controller` object
-        # self.controller = Controller(<Arguments you wish to provide>)
+        self.controller = Controller()
 
         # TODO: Subscribe to all the topics you need to
+        rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
 
         self.loop()
 
@@ -65,13 +70,14 @@ class DBWNode(object):
         while not rospy.is_shutdown():
             # TODO: Get predicted throttle, brake, and steering using `twist_controller`
             # You should only publish the control commands if dbw is enabled
-            # throttle, brake, steering = self.controller.control(<proposed linear velocity>,
+            throttle, brake, steer = self.controller.control()
+            # <proposed linear velocity>,
             #                                                     <proposed angular velocity>,
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
-            # if <dbw is enabled>:
-            #   self.publish(throttle, brake, steer)
+            if self.dbw_enabled:
+              self.publish(throttle, brake, steer)
             rate.sleep()
 
     def publish(self, throttle, brake, steer):
@@ -92,6 +98,24 @@ class DBWNode(object):
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
+    def twist_cb(self, msg):
+        """
+
+        :param msg: geometry_msgs/TwistStamped
+            Vector3 linear
+                float64 x
+                float64 y
+                float64 z
+            Vector3 angular
+                float64 x
+                float64 y
+                float64 z
+        """
+        self.twist = msg.twist.linear.x
+
+    def dbw_enabled_cb(self, is_enabled):
+        rospy.logwarn('CB dbw_enabled=', is_enabled)
+        self.dbw_enabled = is_enabled
 
 if __name__ == '__main__':
     DBWNode()
