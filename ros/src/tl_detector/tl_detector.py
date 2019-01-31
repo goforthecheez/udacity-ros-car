@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import math
+import sys
 import rospy
 from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped, Pose
@@ -100,8 +102,46 @@ class TLDetector(object):
             int: index of the closest waypoint in self.waypoints
 
         """
-        #TODO implement
-        return 0
+        min_idx = -1
+        min_dist = sys.float_info.max
+        for idx, wp in enumerate(self.waypoints.waypoints):
+            dist = distance(pose, wp.pose.pose)
+            if dist < min_dist:
+                min_dist = dist
+                min_idx = idx
+        return min_idx
+
+    def get_closest_light(self, pose):
+        """Identifies the closest traffic light to the given position.
+
+        Args:
+            post (Pose): position to match a light to
+
+        int: index of the closest light in self.lights.
+        """
+        if not self.lights:
+            return -1
+
+        min_idx = -1
+        min_dist = sys.float_info.max
+        for idx, light in enumerate(self.lights)
+            dist = distance(pose, light.pose.pose)
+            if dist < min_dist:
+                min_dist = dist
+                min_idx = idx
+        return min_idx
+
+    def distance(wp1, wp2):
+        """Computes the xy distance between two positions.
+
+        Args:
+            wp1 (Pose): first positions.
+            wp2 (Pose): second positions.
+
+        Returns:
+            float64: distance between the two waypoints
+        """
+        return math.sqrt((wp1.x - wp2.x) ** 2 + (wp1.y - wp2.y) ** 2)
 
     def get_light_state(self, light):
         """Determines the current color of the traffic light
@@ -113,14 +153,19 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        if(not self.has_image):
-            self.prev_light_loc = None
-            return False
+        # HACKHACKHACK: Read traffic light color from `/vehicle/traffic_lights` topic.
+        # NOTE: These values are only available within the simulator, not in real life.
+        return light.state
 
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        #TODO Implement traffic light classifier and uncomment the original code below.
+        # if(not self.has_image):
+        #     self.prev_light_loc = None
+        #     return False
 
-        #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        # cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+
+        # #Get classification
+        # return self.light_classifier.get_classification(cv_image)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -138,13 +183,21 @@ class TLDetector(object):
         if(self.pose):
             car_position = self.get_closest_waypoint(self.pose.pose)
 
-        #TODO find the closest visible traffic light (if one exists)
+        # Find the closest visible traffic light (if one exists)
+        #TODO maybe only execute this if a light was actually seen in a camera image
+        closest_light_idx = self.get_closest_light(self.pose.pose)
+        if closest_light_idx > 0:
+            light = self.lights[closest_light_idx]
 
         if light:
             state = self.get_light_state(light)
-            return light_wp, state
+            light_wp = self.get_closest_waypoint(light.pose.pose)
+            if car_position < light_wp:
+                return light_wp, state
+            return -1, TrafficLight.UNKNOWN
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
+
 
 if __name__ == '__main__':
     try:
