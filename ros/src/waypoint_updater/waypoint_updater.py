@@ -53,6 +53,7 @@ class WaypointUpdater(object):
             if self.pose and self.waypoint_tree: #tree is constructed later than base_waypoints are set, prevents races
                 # Get closest waypoint
                 closest_waypoint_idx = self.get_closest_waypoint_idx()
+                rospy.logdebug('Nearest waypoint: %s', closest_waypoint_idx)
                 self.publish_waypoints(closest_waypoint_idx)
             rate.sleep()
 
@@ -80,6 +81,7 @@ class WaypointUpdater(object):
         lane = Lane()
         lane.header = self.base_waypoints.header
         lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
+        rospy.logdebug('Next waypoint: %s', lane.waypoints[0])
         self.final_waypoints_pub.publish(lane)
 
     def pose_cb(self, msg):
