@@ -26,7 +26,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 200  # Number of waypoints we will publish. You can change this number
-MAX_DECEL = 10 # m/s^2 TODO replace with ROS parameter
+MAX_DECEL = 0.5 # m/s^2 TODO replace with ROS parameter
 
 class WaypointUpdater(object):
     def __init__(self, init_for_test=False):
@@ -93,6 +93,8 @@ class WaypointUpdater(object):
     def plan_lane(self, closest_idx):
         lane = Lane()
         lane.header = self.base_waypoints.header
+        lane.header.stamp = rospy.Time.now()
+        lane.header.seq = closest_idx
 
         last_idx = closest_idx + LOOKAHEAD_WPS
         if self.obstacle_wp_id > closest_idx:
@@ -112,13 +114,13 @@ class WaypointUpdater(object):
         :return: styx_msgs.msg.Lane with coordinates and desired velocities
         """
         lane = []
-        dist_total = self.distance(waypoints, 0, len(waypoints) - 1)
+        pts_before_end = 2
         for i, wp in enumerate(waypoints):
             p = Waypoint()
             p.pose = wp.pose
 
-            dist = self.distance(waypoints, i, len(waypoints) - 1)
-            vel = math.sqrt(dist * waypoints[0].twist.twist.linear.x**2 / dist_total) #TODO: account for MAX_DECEL
+            dist = self.distance(waypoints, i, len(waypoints) - pts_before_end - 1)
+            vel = math.sqrt(2 * dist * MAX_DECEL)
             if vel < .1:
                 vel = 0
             p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
