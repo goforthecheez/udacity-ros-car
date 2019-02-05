@@ -37,7 +37,6 @@ class WaypointUpdater(object):
         self.obstacle_wp_id = None # we may consider having this as an array for multiple obstacles later on
 
         if not init_for_test:
-
             rospy.init_node('waypoint_updater')
 
             rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
@@ -86,14 +85,14 @@ class WaypointUpdater(object):
         return closest_idx
 
     def publish_waypoints(self, closest_idx):
-        lane = self.plan_lane(closest_idx)
+        lane = self.plan_lane(closest_idx, rospy.Time.now())
         rospy.logdebug('Next waypoint: %s', lane.waypoints[0])
         self.final_waypoints_pub.publish(lane)
 
-    def plan_lane(self, closest_idx):
+    def plan_lane(self, closest_idx, time=0):
         lane = Lane()
         lane.header = self.base_waypoints.header
-        lane.header.stamp = rospy.Time.now()
+        lane.header.stamp = time
         lane.header.seq = closest_idx
 
         last_idx = closest_idx + LOOKAHEAD_WPS
