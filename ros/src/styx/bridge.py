@@ -2,6 +2,7 @@
 import rospy
 
 import tf
+import time
 from geometry_msgs.msg import PoseStamped, Quaternion, TwistStamped
 from dbw_mkz_msgs.msg import SteeringReport, ThrottleCmd, BrakeCmd, SteeringCmd
 from std_msgs.msg import Float32 as Float
@@ -95,6 +96,7 @@ class Bridge(object):
         tw = TwistStamped()
         tw.twist.linear.x = velocity
         tw.twist.angular.z = angular
+        tw.header.stamp = rospy.get_rostime()
         return tw
 
     def create_steer(self, val):

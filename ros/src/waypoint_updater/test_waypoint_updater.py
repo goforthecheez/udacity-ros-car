@@ -20,6 +20,7 @@ import unittest
 from waypoint_updater import WaypointUpdater
 
 from styx_msgs.msg import Lane, Waypoint
+from std_msgs.msg import Int32
 
 N_WPS = 10
 
@@ -89,6 +90,34 @@ class TestDeceleration(unittest.TestCase):
         self.assertEqual(lane.waypoints[obtacle_idx - 1].twist.twist.linear.x, lane.waypoints[obtacle_idx - 2].twist.twist.linear.x)
 
         # self.assertGreater(lane.waypoints[2].twist.twist.linear.x, lane.waypoints[3].twist.twist.linear.x)
+
+    def test_obstacle_reset(self):
+        self.wpu.obstacle_wp_id = 3
+
+        msg = Int32()
+        msg.data = None
+        self.wpu.traffic_cb(msg)
+
+        self.assertFalse(self.wpu.obstacle_wp_id)
+
+
+    def test_obstacle_reset_1(self):
+        self.wpu.obstacle_wp_id = 3
+
+        msg = Int32()
+        msg.data = -1
+        self.wpu.traffic_cb(msg)
+
+        self.assertFalse(self.wpu.obstacle_wp_id)
+
+    def test_obstacle_set(self):
+        self.wpu.obstacle_wp_id = None
+
+        msg = Int32()
+        msg.data = 3
+        self.wpu.traffic_cb(msg)
+
+        self.assertEqual(self.wpu.obstacle_wp_id, 3)
 
 if __name__ == '__main__':
    import rosunit
