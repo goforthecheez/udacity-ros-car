@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PointStamped
 from styx_msgs.msg import Lane, Waypoint
 from std_msgs.msg import Bool, Int32
 from scipy.spatial import KDTree
@@ -44,11 +44,8 @@ class WaypointUpdater(object):
             rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
             rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
-            # topic used to test brake planning
-            # rostopic pub -1 /obstacle_id std_msgs/Int32 '400'
-            rospy.Subscriber('/obstacle_id', Int32, self.obstacle_cb)
-
-            # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
+            # to manualy publish: rostopic pub -1 /traffic_waypoint std_msgs/Int32 '400'
+            rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
             self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -191,18 +188,18 @@ class WaypointUpdater(object):
             rospy.logdebug('CB Basewaypoints: tree constructed ok')
 
     def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        pass
-
-    def obstacle_cb(self, msg):
         """
         :param msg: Int32 idx of the waypoint where we want the car to stop
         """
-        self.obstacle_wp_id = msg.data
-        rospy.logwarn('Obstacle received idx=%s', self.obstacle_wp_id)
+        if msg.data and msg.data >= 0:
+            self.obstacle_wp_id = msg.data
+            rospy.logwarn('Obstacle received idx=%s', self.obstacle_wp_id)
+        else:
+            self.obstacle_wp_id = None
 
-        t = rospy.get_rostime()
-        ln = self.plan_lane(self.get_closest_waypoint_idx(), t)
+        ## debug info
+        # t = rospy.get_rostime()
+        # ln = self.plan_lane(self.get_closest_waypoint_idx(), t)
 
         # self.plot_velocity(ln, t)
 
