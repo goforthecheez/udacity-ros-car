@@ -24,11 +24,11 @@ from std_msgs.msg import Int32
 
 N_WPS = 10
 
+
 class TestDeceleration(unittest.TestCase):
 
     def setUp(self):
         self.base_wps = Lane()
-
 
         self.wpu = WaypointUpdater(init_for_test=True)
         self.wpu.base_waypoints = self.base_wps
