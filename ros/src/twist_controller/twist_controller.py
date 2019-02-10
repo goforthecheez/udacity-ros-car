@@ -1,4 +1,5 @@
 from yaw_controller import YawController
+from lowpass import LowPassFilter
 from pid import PID
 import rospy
 
@@ -18,6 +19,13 @@ class Controller(object):
         max_throttle = 0.2
         self.throttle_controller = PID(kp, ki, kd, min_throttle, max_throttle)
 
+        self.ts = 0.02 # sample time
+        self.tau = 0.5 # 1/(2*pi*tau) = cutoff frequency
+        self.vel_lpf = LowPassFilter(self.tau, self.ts)
+        self.brake_lpf = LowPassFilter(self.tau, self.ts)
+        self.brake_lpf.filt(0.0)
+        self.brake_lpf_reinit = False
+
         self.vehicle_mass = vehicle_mass
         self.decel_limit = decel_limit
         self.wheel_radius = wheel_radius
@@ -36,6 +44,7 @@ class Controller(object):
             self.throttle_controller.reset()
             return 0., 0., 0.
 
+        current_velocity = self.vel_lpf.filt(current_velocity)
         steer = self.yaw_controller.get_steering(linear_velocity, angular_velocity, current_velocity)
 
         vel_error = linear_velocity - current_velocity
@@ -45,14 +54,23 @@ class Controller(object):
 
         throttle = self.throttle_controller.step(vel_error, sample_time)
 
-        if ((linear_velocity == 0.0) and (current_velocity < 0.1)):
+        if ((linear_velocity < 0.02) and (current_velocity < 0.1)):
             throttle = 0.0
             brake = 700 # hold Carla in place
+            self.brake_lpf_reinit = True
         elif ((throttle < 0.1) and (vel_error < 0.0)):
+            if (self.brake_lpf_reinit == True):
+                self.brake_lpf = LowPassFilter(self.tau, self.ts)
+                self.brake_lpf.filt(0.0)
+                self.brake_lpf_reinit = False
             throttle = 0.0
             decel = max(vel_error, self.decel_limit)
             brake = abs(decel)*self.vehicle_mass*self.wheel_radius
+            brake = self.brake_lpf.filt(brake/9.81)
         else:
             brake = 0.0
+            self.brake_lpf_reinit = True
+
+        # rospy.logdebug('vel error: %6.2f / throttle: %6.2f / brake: %6.2f' % (vel_error, throttle, brake))
 
         return throttle, brake, steer
