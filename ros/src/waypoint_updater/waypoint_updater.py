@@ -120,7 +120,7 @@ class WaypointUpdater(object):
         total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end - 1) # total distance to obstacle
         start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
         start_vel_kmh = start_vel * 3.6
-        stop_d = start_vel_kmh # just an assumption that safe stop distance is equal to your speed value (but in meters)
+        stop_d = start_vel_kmh * 2.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
         start_params = [start_vel, 0, 0] # velocity, acceleration, jerk - derivatives of velocity
         coefs = self.gen_jerk_safe_poly(stop_d, start_params, [0, DECEL_AT_STOP, 0])
