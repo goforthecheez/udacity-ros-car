@@ -193,7 +193,7 @@ class WaypointUpdater(object):
         """
         if msg.data and msg.data >= 0:
             self.obstacle_wp_id = msg.data
-            rospy.logwarn('Obstacle received idx=%s', self.obstacle_wp_id)
+            rospy.logdebug('Obstacle received idx=%s', self.obstacle_wp_id)
         else:
             self.obstacle_wp_id = None
 
