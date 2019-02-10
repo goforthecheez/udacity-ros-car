@@ -34,8 +34,6 @@ class TLDetector(object):
         self.lights = []
         self.lights_red_2d = [] # [waypoint_idx, ... ] array of waypoints associated with the red light
 
-        config_string = rospy.get_param("/traffic_light_config")
-        self.config = yaml.load(config_string)
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -51,6 +49,9 @@ class TLDetector(object):
 
         if not init_without_ros:
             rospy.init_node('tl_detector')
+
+            config_string = rospy.get_param("/traffic_light_config")
+            self.config = yaml.load(config_string)
 
             rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
             rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
