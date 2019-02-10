@@ -20,8 +20,8 @@ class Controller(object):
         self.throttle_controller = PID(kp, ki, kd, min_throttle, max_throttle)
 
         self.ts = 0.02 # sample time
-        self.tau = 0.5 # 1/(2*pi*tau) = cutoff frequency
-        self.vel_lpf = LowPassFilter(self.tau, self.ts)
+        self.tau = 0.3 # 1/(2*pi*tau) = cutoff frequency
+        self.vel_lpf = LowPassFilter(self.tau / 10.0, self.ts)
         self.brake_lpf = LowPassFilter(self.tau, self.ts)
         self.brake_lpf.filt(0.0)
         self.brake_lpf_reinit = False
@@ -56,7 +56,7 @@ class Controller(object):
 
         if ((linear_velocity < 0.02) and (current_velocity < 0.1)):
             throttle = 0.0
-            brake = 700 # hold Carla in place
+            brake = 700.0 # hold Carla in place
             self.brake_lpf_reinit = True
         elif ((throttle < 0.1) and (vel_error < 0.0)):
             if (self.brake_lpf_reinit == True):
@@ -66,7 +66,7 @@ class Controller(object):
             throttle = 0.0
             decel = max(vel_error, self.decel_limit)
             brake = abs(decel)*self.vehicle_mass*self.wheel_radius
-            brake = self.brake_lpf.filt(brake/9.81)
+            brake = self.brake_lpf.filt(brake/max(9.81 + vel_error/2.0, 1.0))
         else:
             brake = 0.0
             self.brake_lpf_reinit = True
