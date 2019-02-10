@@ -82,6 +82,9 @@ class TLDetector(object):
 
     def traffic_cb(self, msg):
 
+        if not self.waypoints_2d:
+            return
+
         red_wps_idx = []
         for l in msg.lights:
             if l.state == TrafficLight.RED:
