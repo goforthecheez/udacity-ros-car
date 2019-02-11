@@ -34,8 +34,6 @@ class TLDetector(object):
         self.camera_image = None
 
         self.lights = []
-        self.lights_red_idxs = [] # array of indices into the lights array that are associated with the red light
-
 
         self.bridge = CvBridge()
         # self.listener = tf.TransformListener()
@@ -44,9 +42,6 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
-
-        # for test purposes in order to reduce amount of published data
-        self.last_tl_pub_time = 0
 
         if not self.is_testing:
             rospy.init_node('tl_detector')
@@ -88,24 +83,6 @@ class TLDetector(object):
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
-
-        # TODO(adelinew): Restore this to if *not* self.is_testing.
-        if self.is_testing:
-            if not self.waypoints_2d or not self.waypoint_tree:
-                return
-
-            red_idxs = []
-            for idx, l in enumerate(msg.lights):
-                if l.state == TrafficLight.RED:
-                    red_idxs.append(idx)
-            self.lights_red_idxs = red_idxs
-
-            # for testing without proper detector TODO: remove
-            # rospy.logwarn("Update TL point 101 wps={}, pose={}".format(self.waypoints is not None, self.pose is not None))
-            if self.waypoints and self.pose and self.last_tl_pub_time < rospy.get_rostime().secs:
-                self.last_tl_pub_time = rospy.get_rostime().secs
-                # rospy.logwarn("Update TL point")
-                self.image_cb(None)
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -154,7 +131,8 @@ class TLDetector(object):
         """
         # HACKHACKHACK: Read traffic light color from `/vehicle/traffic_lights` topic.
         # NOTE: These values are only available within the simulator, not in real life.
-        # return light.state
+        if self.is_testing:
+            return light.state
 
         if(not self.has_image):
             self.prev_light_loc = None
@@ -164,7 +142,6 @@ class TLDetector(object):
 
         # Get classification
         classification = self.light_classifier.get_classification(cv_image)
-        rospy.logwarn("Traffic light color={}".format(classification))
         return classification
 
     def process_traffic_lights(self):
@@ -176,24 +153,26 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        if not self.lights :
+        if not self.lights:
             return -1, TrafficLight.UNKNOWN
 
         if(self.pose):
             car_wp_idx = self.get_closest_waypoint(self.pose.pose)
 
-            for l_idx, _ in enumerate(self.lights):
-                stop_x, stop_y = self.stop_line_positions[l_idx]
+            for i, _ in enumerate(self.lights):
+                stop_x, stop_y = self.stop_line_positions[i]
                 # Car should stop *before* the stop line.
                 stop_line_wp_idx = (self.get_closest_waypoint_xy(stop_x, stop_y) - 1) % len(self.waypoints.waypoints)
+                # self.lights is in order. Return as soon as we see the first traffic
+                # light (stop line) past the car's position.
                 if stop_line_wp_idx > car_wp_idx:
-                    return stop_line_wp_idx, self.get_light_state(self.lights[l_idx])  # TODO(adelinew): Delete arg.
+                    return stop_line_wp_idx, self.get_light_state(self.lights[i])
 
             if len(self.lights):  # waypoint is further than last light - let's loop
                 stop_x, stop_y = self.stop_line_positions[0]
                 # Car should stop *before* the stop line.
                 stop_line_wp_idx = (self.get_closest_waypoint_xy(stop_x, stop_y) - 1) % len(self.waypoints.waypoints)
-                return stop_line_wp_idx, self.get_light_state(self.lights[0])  # TODO(adelinew): Delete arg.
+                return stop_line_wp_idx, self.get_light_state(self.lights[0])
 
         return -1, TrafficLight.UNKNOWN
 
