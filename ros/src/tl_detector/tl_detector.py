@@ -129,14 +129,13 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        # HACKHACKHACK: Read traffic light color from `/vehicle/traffic_lights` topic.
-        # NOTE: These values are only available within the simulator, not in real life.
+        # For testing, the lights array should be manually set and read from.
         if self.is_testing:
             return light.state
 
         if(not self.has_image):
             self.prev_light_loc = None
-            return False
+            return TrafficLight.UNKNOWN
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
