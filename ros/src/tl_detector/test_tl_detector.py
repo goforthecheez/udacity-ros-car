@@ -28,7 +28,7 @@ N_WPS = 10 # number of waypoints for test
 class TestTlDetector(unittest.TestCase):
 
     def setUp(self):
-        self.tld = TLDetector(init_without_ros=True)
+        self.tld = TLDetector(is_testing=True)
 
         base_wps = Lane()
 

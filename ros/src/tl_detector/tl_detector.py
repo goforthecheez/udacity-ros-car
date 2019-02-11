@@ -19,10 +19,12 @@ STATE_COUNT_THRESHOLD = 3
 
 class TLDetector(object):
 
-    def __init__(self, init_without_ros=False):
+    def __init__(self, is_testing=False):
         """
-        :param init_without_ros: in case class has to run in test environment and we don't want ros sub/pub to fail
+        :param is_testing: in case class has to run in test environment without ros, and we don't want ros sub/pub to fail
         """
+
+        self.is_testing = is_testing
 
         self.pose = None
         self.waypoints = None
@@ -46,7 +48,7 @@ class TLDetector(object):
         # for test purposes in order to reduce amount of published data
         self.last_tl_pub_time = 0
 
-        if not init_without_ros:
+        if not self.is_testing:
             rospy.init_node('tl_detector')
 
             config_string = rospy.get_param("/traffic_light_config")
@@ -82,26 +84,26 @@ class TLDetector(object):
             self.waypoint_tree = KDTree(self.waypoints_2d)
 
     def traffic_cb(self, msg):
-
-        if not self.waypoints_2d or not self.waypoint_tree:
-            return
-
-        red_wps_idx = []
-        for l in msg.lights:
-            if l.state == TrafficLight.RED:
-                l_wp_idx = self.get_closest_waypoint_xy(l.pose.pose.position.x, l.pose.pose.position.y)
-                red_wps_idx.append(l_wp_idx)
-        red_wps_idx.sort()
-
         self.lights = msg.lights
-        self.lights_red_2d = red_wps_idx
 
-        # for testing without proper detector TODO: remove
-        # rospy.logwarn("Update TL point 101 wps={}, pose={}".format(self.waypoints is not None, self.pose is not None))
-        if self.waypoints and self.pose and self.last_tl_pub_time < rospy.get_rostime().secs:
-            self.last_tl_pub_time = rospy.get_rostime().secs
-            # rospy.logwarn("Update TL point")
-            self.image_cb(None)
+        if self.is_testing:
+            if not self.waypoints_2d or not self.waypoint_tree:
+                return
+
+            red_wps_idx = []
+            for l in msg.lights:
+                if l.state == TrafficLight.RED:
+                    l_wp_idx = self.get_closest_waypoint_xy(l.pose.pose.position.x, l.pose.pose.position.y)
+                    red_wps_idx.append(l_wp_idx)
+            red_wps_idx.sort()
+            self.lights_red_2d = red_wps_idx
+
+            # for testing without proper detector TODO: remove
+            # rospy.logwarn("Update TL point 101 wps={}, pose={}".format(self.waypoints is not None, self.pose is not None))
+            if self.waypoints and self.pose and self.last_tl_pub_time < rospy.get_rostime().secs:
+                self.last_tl_pub_time = rospy.get_rostime().secs
+                # rospy.logwarn("Update TL point")
+                self.image_cb(None)
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
