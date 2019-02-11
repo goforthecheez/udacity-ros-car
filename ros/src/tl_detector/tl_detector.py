@@ -34,7 +34,7 @@ class TLDetector(object):
         self.camera_image = None
 
         self.lights = []
-        self.lights_red_2d = [] # [waypoint_idx, ... ] array of waypoints associated with the red light
+        self.lights_red_idxs = [] # [waypoint_idx, ... ] array of waypoints associated with the red light
 
 
         self.bridge = CvBridge()
@@ -96,7 +96,7 @@ class TLDetector(object):
                     l_wp_idx = self.get_closest_waypoint_xy(l.pose.pose.position.x, l.pose.pose.position.y)
                     red_wps_idx.append(l_wp_idx)
             red_wps_idx.sort()
-            self.lights_red_2d = red_wps_idx
+            self.lights_red_idxs = red_wps_idx
 
             # for testing without proper detector TODO: remove
             # rospy.logwarn("Update TL point 101 wps={}, pose={}".format(self.waypoints is not None, self.pose is not None))
@@ -199,12 +199,12 @@ class TLDetector(object):
         y = pose.position.y
         wp_idx = self.get_closest_waypoint_xy(x, y)
 
-        for l_idx in self.lights_red_2d:
+        for l_idx in self.lights_red_idxs:
             if l_idx > wp_idx:
                 return l_idx, TrafficLight.RED
 
-        if len(self.lights_red_2d):  # waypoint is further than last light - let's loop
-            return self.lights_red_2d[0], TrafficLight.RED
+        if len(self.lights_red_idxs):  # waypoint is further than last light - let's loop
+            return self.lights_red_idxs[0], TrafficLight.RED
         else:
             return -1, TrafficLight.UNKNOWN
 
