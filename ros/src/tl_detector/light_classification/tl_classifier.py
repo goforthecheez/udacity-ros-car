@@ -1,18 +1,27 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
+import rospy
 
 class TLClassifier(object):
     def __init__(self, is_site):
-        
+        # The model testing result is on https://github.com/HiepTang/capstone-traffic-light/blob/master/tl_classification.ipynb
+        # The thresold will set following this result
         if is_site:
+            # ssd_inception_v2_coco_2017_11_17 model - the threshold only about 0.60
             PATH_TO_GRAPH = r'light_classification/models/ssd_i_coco/real/frozen_inference_graph.pb'
+            self.threshold = .6
+            # faster_rcnn_inception_v2_coco_2018_01_28 - the threshold can set to .8 or .9
+            # Consider about performance
+            # Uncomment these lines and comment out ssd lines if you want to use frcnn model.
+            # PATH_TO_GRAPH = r'light_classification/models/frcnn/frozen_inference_graph.pb'
+            # self.threshold = .8
         else:
             PATH_TO_GRAPH = r'light_classification/models/ssd_i_coco/sim/frozen_inference_graph.pb'
+            self.threshold = .65
 
         self.graph = tf.Graph()
-        self.threshold = .5
-
+        
         with self.graph.as_default():
             od_graph_def = tf.GraphDef()
             with tf.gfile.GFile(PATH_TO_GRAPH, 'rb') as fid:
@@ -39,9 +48,12 @@ class TLClassifier(object):
         """
         with self.graph.as_default():
             img_expand = np.expand_dims(image, axis=0)
+            start = rospy.get_rostime().secs
             (boxes, scores, classes, num_detections) = self.sess.run(
                 [self.boxes, self.scores, self.classes, self.num_detections],
                 feed_dict={self.image_tensor: img_expand})
+            end = rospy.get_rostime().secs
+            rospy.logdebug('classification duration {} seconds'.format(end - start))
         
         boxes = np.squeeze(boxes)
         scores = np.squeeze(scores)
