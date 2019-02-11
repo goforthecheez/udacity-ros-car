@@ -1,6 +1,8 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
+import time
+import rospy
 
 class TLClassifier(object):
     def __init__(self, is_site):
@@ -37,6 +39,7 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        start = time.time()
         with self.graph.as_default():
             img_expand = np.expand_dims(image, axis=0)
             (boxes, scores, classes, num_detections) = self.sess.run(
@@ -46,14 +49,17 @@ class TLClassifier(object):
         boxes = np.squeeze(boxes)
         scores = np.squeeze(scores)
         classes = np.squeeze(classes).astype(np.int32)
-
         
         if scores[0] > self.threshold:
             if classes[0] == 1:
-                return TrafficLight.GREEN
+                color = TrafficLight.GREEN
             elif classes[0] == 2:
-                return TrafficLight.RED
+                color = TrafficLight.RED
             elif classes[0] == 3:
-                return TrafficLight.YELLOW
+                color = TrafficLight.YELLOW
+        else:
+            color = TrafficLight.UNKNOWN
 
-        return TrafficLight.UNKNOWN
+        end = time.time()
+        elapsed = end - start
+        rospy.logwarn("Traffic light color is {} | Time elapsed: {} sec".format(color, elapsed))
