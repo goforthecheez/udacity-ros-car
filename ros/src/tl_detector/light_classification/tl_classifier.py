@@ -60,8 +60,7 @@ class TLClassifier(object):
         else:
             color = TrafficLight.UNKNOWN
 
-        end = time.time()
-        elapsed = end - start
+        elapsed = time.time() - start
         rospy.logwarn("Traffic light color is {} | Time elapsed: {} sec".format(color, elapsed))
         return color
 
