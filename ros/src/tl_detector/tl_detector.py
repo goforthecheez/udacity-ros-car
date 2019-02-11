@@ -154,17 +154,18 @@ class TLDetector(object):
         """
         # HACKHACKHACK: Read traffic light color from `/vehicle/traffic_lights` topic.
         # NOTE: These values are only available within the simulator, not in real life.
-        return light.state
+        # return light.state
 
-        #TODO Implement traffic light classifier and uncomment the original code below.
-        # if(not self.has_image):
-        #     self.prev_light_loc = None
-        #     return False
+        if(not self.has_image):
+            self.prev_light_loc = None
+            return False
 
-        # cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
-        # #Get classification
-        # return self.light_classifier.get_classification(cv_image)
+        # Get classification
+        classification = self.light_classifier.get_classification(cv_image)
+        rospy.logwarn("Traffic light color={}".format(classification))
+        return classification
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -181,18 +182,18 @@ class TLDetector(object):
         if(self.pose):
             car_wp_idx = self.get_closest_waypoint(self.pose.pose)
 
-            for l_idx in self.lights_red_idxs:
+            for l_idx, _ in enumerate(self.lights):
                 stop_x, stop_y = self.stop_line_positions[l_idx]
                 # Car should stop *before* the stop line.
                 stop_line_wp_idx = (self.get_closest_waypoint_xy(stop_x, stop_y) - 1) % len(self.waypoints.waypoints)
                 if stop_line_wp_idx > car_wp_idx:
-                    return stop_line_wp_idx, TrafficLight.RED
+                    return stop_line_wp_idx, self.get_light_state(self.lights[l_idx])  # TODO(adelinew): Delete arg.
 
-            if len(self.lights_red_idxs):  # waypoint is further than last light - let's loop
+            if len(self.lights):  # waypoint is further than last light - let's loop
                 stop_x, stop_y = self.stop_line_positions[0]
                 # Car should stop *before* the stop line.
                 stop_line_wp_idx = (self.get_closest_waypoint_xy(stop_x, stop_y) - 1) % len(self.waypoints.waypoints)
-                return stop_line_wp_idx, TrafficLight.RED
+                return stop_line_wp_idx, self.get_light_state(self.lights[0])  # TODO(adelinew): Delete arg.
 
         return -1, TrafficLight.UNKNOWN
 
