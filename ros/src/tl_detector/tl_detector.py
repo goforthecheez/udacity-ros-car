@@ -111,9 +111,8 @@ class TLDetector(object):
                 # do not process this image, wait until enough time has elapsed
                 return
             else:
-                # set current timestamp and next duration, take jitter into account
+                # set current timestamp
                 self.timestamp_before = timestamp_now
-                self.skipping_duration += rospy.Duration(SKIPPING_DURATION) - time_elapsed
 
         self.has_image = True
         self.camera_image = msg
