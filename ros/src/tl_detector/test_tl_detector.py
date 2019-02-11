@@ -84,14 +84,14 @@ class TestTlDetector(unittest.TestCase):
 
 # traffic_cb tests
     def test_get_tl(self):
-        self.assertEqual(self.tld.lights_red_2d, [1, 6]) #corresponding waypoint ids for each red traffic light
+        self.assertEqual(self.tld.lights_red_idxs, [1, 6]) #corresponding waypoint ids for each red traffic light
 
     def test_get_tl_no_red(self):
         p = Pose()
         p.position.x = 3.0
         p.position.y = 3.0
 
-        self.tld.lights_red_2d = []
+        self.tld.lights_red_idxs = []
         # self.tld.lights = []
 
         idx = self.tld.get_closest_light(p)
