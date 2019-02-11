@@ -89,7 +89,8 @@ class TLDetector(object):
     def traffic_cb(self, msg):
         self.lights = msg.lights
 
-        if not self.is_testing:
+        # TODO(adelinew): Restore this to if *not* self.is_testing.
+        if self.is_testing:
             if not self.waypoints_2d or not self.waypoint_tree:
                 return
 
