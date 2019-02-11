@@ -129,7 +129,7 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        # For testing, the lights array should be manually set and read from.
+        # In tests, manually set the lights array and read state from it.
         if self.is_testing:
             return light.state
 
