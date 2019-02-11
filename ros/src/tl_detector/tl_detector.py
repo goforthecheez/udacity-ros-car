@@ -36,7 +36,6 @@ class TLDetector(object):
 
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
         # self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -52,6 +51,7 @@ class TLDetector(object):
 
             config_string = rospy.get_param("/traffic_light_config")
             self.config = yaml.load(config_string)
+            self.light_classifier = TLClassifier(self.config['is_site'])
 
             rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
             rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -83,7 +83,7 @@ class TLDetector(object):
 
     def traffic_cb(self, msg):
 
-        if not self.waypoints_2d:
+        if not self.waypoints_2d or not self.waypoint_tree:
             return
 
         red_wps_idx = []
@@ -111,6 +111,9 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
+        if not self.waypoints_2d or not self.waypoint_tree:
+            return
+        
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
