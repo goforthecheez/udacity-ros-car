@@ -20,7 +20,7 @@ import unittest
 from tl_detector import TLDetector
 from styx_msgs.msg import Lane, Waypoint
 from styx_msgs.msg import TrafficLightArray, TrafficLight
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped, Pose
 
 N_WPS = 10 # number of waypoints for test
 
@@ -49,6 +49,7 @@ class TestTlDetector(unittest.TestCase):
             tl.pose.pose.position.y = l[1]
             lights.lights.append(tl)
         self.tld.traffic_cb(lights)
+        self.tld.stop_line_positions = [[p[0], p[1]] for p in l_arr] # just put the stop line at the traffic light
 
     def test_wp_cb(self):
         self.assertEqual(len(self.tld.waypoints.waypoints), N_WPS)
@@ -84,44 +85,47 @@ class TestTlDetector(unittest.TestCase):
 
 # traffic_cb tests
     def test_get_tl(self):
-        self.assertEqual(self.tld.lights_red_idxs, [1, 6]) #corresponding waypoint ids for each red traffic light
+        self.assertEqual(self.tld.lights_red_idxs, [0, 3]) #corresponding waypoint ids for each red traffic light
 
     def test_get_tl_no_red(self):
-        p = Pose()
-        p.position.x = 3.0
-        p.position.y = 3.0
+        p = PoseStamped()
+        p.pose.position.x = 3.0
+        p.pose.position.y = 3.0
 
         self.tld.lights_red_idxs = []
         # self.tld.lights = []
 
-        idx = self.tld.get_closest_light(p)
+        idx = self.tld.process_traffic_lights()
 
         self.assertEqual(idx, (-1, 4))
 
     def test_get_tl_wp_1ahead(self):
-        p = Pose()
-        p.position.x = 3.0
-        p.position.y = 3.0
+        p = PoseStamped()
+        p.pose.position.x = 3.0
+        p.pose.position.y = 3.0
+        self.tld.pose = p
 
-        idx = self.tld.get_closest_light(p)
+        idx = self.tld.process_traffic_lights()
 
         self.assertEqual(idx, (6, 0))
 
     def test_get_tl_wp_2ahead(self):
-        p = Pose()
-        p.position.x = 0.0
-        p.position.y = 0.1
+        p = PoseStamped()
+        p.pose.position.x = 0.0
+        p.pose.position.y = 0.1
+        self.tld.pose = p
 
-        idx = self.tld.get_closest_light(p)
+        idx = self.tld.process_traffic_lights()
 
         self.assertEqual(idx, (1, 0))
 
     def test_get_tl_wp_loop(self):
-        p = Pose()
-        p.position.x = 10.0
-        p.position.y = 10.0
+        p = PoseStamped()
+        p.pose.position.x = 10.0
+        p.pose.position.y = 10.0
+        self.tld.pose = p
 
-        idx = self.tld.get_closest_light(p)
+        idx = self.tld.process_traffic_lights()
 
         self.assertEqual(idx, (1, 0))
 

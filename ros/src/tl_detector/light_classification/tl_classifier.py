@@ -1,8 +1,13 @@
+import logging
+logging.getLogger('tensorflow').disabled = True
+
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
 
+
 class TLClassifier(object):
+
     def __init__(self, is_site):
         
         if is_site:
@@ -27,6 +32,7 @@ class TLClassifier(object):
                 'num_detections:0')
 
         self.sess = tf.Session(graph=self.graph)
+
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
