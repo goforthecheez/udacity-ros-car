@@ -94,7 +94,12 @@ class TLDetector(object):
         """
         if not self.waypoints_2d or not self.waypoint_tree:
             return
-        
+
+        t = rospy.get_rostime()
+#        rospy.logwarn("nsec={} mod={}".format(int(t.nsecs * 1e-8), int(t.nsecs * 1e-8) % 3))
+        if int(t.nsecs * 1e-8) % 5 != 0:
+            return
+
         self.has_image = True
         self.camera_image = msg
         stop_line_wp, state = self.process_traffic_lights()
