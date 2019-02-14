@@ -52,7 +52,7 @@ class WaypointUpdater(object):
             self.periodically_publish_waypoints()
 
     def periodically_publish_waypoints(self):
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(25)
         while not rospy.is_shutdown():
             if self.pose and self.waypoint_tree: #tree is constructed later than base_waypoints are set, prevents races
                 # Get closest waypoint

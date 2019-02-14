@@ -96,7 +96,6 @@ class TLDetector(object):
             return
 
         t = rospy.get_rostime()
-#        rospy.logwarn("nsec={} mod={}".format(int(t.nsecs * 1e-8), int(t.nsecs * 1e-8) % 3))
         if int(t.nsecs * 1e-8) % 5 != 0:
             return
 
