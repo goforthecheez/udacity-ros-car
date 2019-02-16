@@ -27,6 +27,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
 DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s
+DECEL_AT_START = -0.05
 
 class WaypointUpdater(object):
     def __init__(self, init_for_test=False):
@@ -122,7 +123,7 @@ class WaypointUpdater(object):
         start_vel_kmh = start_vel * 3.6
         stop_d = start_vel_kmh * 2.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
-        start_params = [start_vel, 0, 0] # velocity, acceleration, jerk - derivatives of velocity
+        start_params = [start_vel, DECEL_AT_START, 0] # velocity, acceleration, jerk - derivatives of velocity
         coefs = self.gen_jerk_safe_poly(stop_d, start_params, [0, DECEL_AT_STOP, 0])
 
         for i, wp in enumerate(waypoints):
