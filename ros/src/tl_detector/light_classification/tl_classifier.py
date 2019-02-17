@@ -1,24 +1,25 @@
-#from styx_msgs.msg import TrafficLight
+from styx_msgs.msg import TrafficLight
 
 import tensorflow as tf
 import numpy as np
 import cv2
 import rospy
-
+import os
 
 class TLClassifier(object):
     def __init__(self):
         #TODO load classifier
-        graph_path = 'light_classification/TL_training/frozen_inference_graph.pb'
-
+        curr_dir = os.path.dirname(os.path.realpath(__file__))
+        path_to_ckpt = curr_dir + '/TL_training/frozen_inference_graph.pb/'
+       
         self.graph = tf.Graph()
-        self.threshold = .5
+        self.threshold = 0.5
 
 #loading TF graph
 
         with self.graph.as_default():
             od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(graph_path, 'rb') as fid:
+            with tf.gfile.GFile(path_to_ckpt, 'rb') as fid:
                 od_graph_def.ParseFromString(fid.read())
                 tf.import_graph_def(od_graph_def, name='')
 
