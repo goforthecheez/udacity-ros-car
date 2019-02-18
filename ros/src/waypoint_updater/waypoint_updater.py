@@ -26,6 +26,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
+NEXT_WP_AHEAD = 5   # Number of waypoints we add to the closest waypoint
 DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s
 DECEL_AT_START = -0.05
 
@@ -99,7 +100,7 @@ class WaypointUpdater(object):
         if self.obstacle_wp_id > closest_idx:
             last_idx = min(closest_idx + LOOKAHEAD_WPS, self.obstacle_wp_id) #TODO fix for circle case
 
-        lane.waypoints = self.base_waypoints.waypoints[closest_idx:last_idx]
+        lane.waypoints = self.base_waypoints.waypoints[closest_idx+NEXT_WP_AHEAD:last_idx+NEXT_WP_AHEAD]
 
         if closest_idx <= self.obstacle_wp_id <= last_idx:
             lane.waypoints = self.decelerate_waypoints(lane.waypoints)
