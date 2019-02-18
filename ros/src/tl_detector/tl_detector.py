@@ -16,6 +16,7 @@ from scipy.spatial import KDTree
 import numpy as np
 
 STATE_COUNT_THRESHOLD = 3
+SKIPPING_DURATION = 0.5 # time in seconds to wait until next camera image will be processed
 
 class TLDetector(object):
 
@@ -68,6 +69,9 @@ class TLDetector(object):
 
             self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
+            self.timestamp_before = None
+            self.skipping_duration = None
+
             rospy.spin()
 
     def pose_cb(self, msg):
@@ -95,9 +99,21 @@ class TLDetector(object):
         if not self.waypoints_2d or not self.waypoint_tree:
             return
 
-        t = rospy.get_rostime()
-        if int(t.nsecs * 1e-8) % 5 != 0:
-            return
+        # check if it's time to process the next image
+        timestamp_now = rospy.get_rostime()
+        if (self.timestamp_before == None):
+            # it's the very first image
+            self.timestamp_before = timestamp_now
+            self.skipping_duration = rospy.Duration(SKIPPING_DURATION)
+        else:
+            time_elapsed = timestamp_now - self.timestamp_before
+            if (time_elapsed < self.skipping_duration):
+                # do not process this image, wait until enough time has elapsed
+                return
+            else:
+                # set current timestamp and next duration, take jitter into account
+                self.timestamp_before = timestamp_now
+                self.skipping_duration += rospy.Duration(SKIPPING_DURATION) - time_elapsed
 
         self.has_image = True
         self.camera_image = msg
