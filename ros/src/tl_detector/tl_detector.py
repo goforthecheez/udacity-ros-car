@@ -18,7 +18,7 @@ import numpy as np
 
 STATE_COUNT_THRESHOLD = 3
 SKIPPING_DURATION = 0.5 # time in seconds to wait until next camera image will be processed
-MAX_WP_DISTANCE_TO_CLASSIFY_TL = 20
+MAX_WP_DISTANCE_TO_CLASSIFY_TL = 100
 
 class TLDetector(object):
 
@@ -192,7 +192,7 @@ class TLDetector(object):
                     if (stop_line_wp_idx - car_wp_idx) < MAX_WP_DISTANCE_TO_CLASSIFY_TL:
                         return stop_line_wp_idx, self.get_light_state(self.lights[i])
                     else:
-                        rospy.logwarn("Request to process traffic light, but it is too far.")
+                        #rospy.logwarn("Request to process traffic light, but it is too far.")
                         return -1, TrafficLight.UNKNOWN
 
             if len(self.lights):  # waypoint is further than last light - let's loop
@@ -202,7 +202,7 @@ class TLDetector(object):
                 if (stop_line_wp_idx - car_wp_idx) % len(self.waypoints.waypoints) < MAX_WP_DISTANCE_TO_CLASSIFY_TL:
                     return stop_line_wp_idx, self.get_light_state(self.lights[0])
                 else:
-                    rospy.logwarn("Request to process traffic light, but it is too far.")
+                    #rospy.logwarn("Request to process traffic light, but it is too far.")
                     return -1, TrafficLight.UNKNOWN
 
         return -1, TrafficLight.UNKNOWN
