@@ -16,7 +16,7 @@ import yaml
 from scipy.spatial import KDTree
 import numpy as np
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 SKIPPING_DURATION = 0.5 # time in seconds to wait until next camera image will be processed
 MAX_WP_DISTANCE_TO_CLASSIFY_TL = 100
 
