@@ -26,9 +26,11 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
-NEXT_WP_AHEAD = 5   # Number of waypoints we add to the closest waypoint
 DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s
 DECEL_AT_START = -0.05
+WPS_OFFSET_INFRONT_CAR = 4
+
+WPU_UPDATE_FREQUENCY = 20
 
 class WaypointUpdater(object):
     def __init__(self, init_for_test=False):
@@ -54,13 +56,17 @@ class WaypointUpdater(object):
             self.periodically_publish_waypoints()
 
     def periodically_publish_waypoints(self):
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(WPU_UPDATE_FREQUENCY)
         while not rospy.is_shutdown():
             if self.pose and self.waypoint_tree: #tree is constructed later than base_waypoints are set, prevents races
+                t1 = rospy.get_rostime()
                 # Get closest waypoint
                 closest_waypoint_idx = self.get_closest_waypoint_idx()
-                rospy.logdebug('Nearest waypoint: %s', closest_waypoint_idx)
+                # rospy.logdebug('Nearest waypoint: %s', closest_waypoint_idx)
                 self.publish_waypoints(closest_waypoint_idx)
+
+                t2 = rospy.get_rostime()
+                # rospy.logwarn('WPU runtime = %f', (t2-t1).to_sec())
             rate.sleep()
 
     def get_closest_waypoint_idx(self):
@@ -87,7 +93,6 @@ class WaypointUpdater(object):
 
     def publish_waypoints(self, closest_idx):
         lane = self.plan_lane(closest_idx, rospy.get_rostime())
-        rospy.logdebug('Next waypoint: %s', lane.waypoints[0])
         self.final_waypoints_pub.publish(lane)
 
     def plan_lane(self, closest_idx, time=0):
@@ -100,7 +105,7 @@ class WaypointUpdater(object):
         if self.obstacle_wp_id > closest_idx:
             last_idx = min(closest_idx + LOOKAHEAD_WPS, self.obstacle_wp_id) #TODO fix for circle case
 
-        lane.waypoints = self.base_waypoints.waypoints[closest_idx+NEXT_WP_AHEAD:last_idx+NEXT_WP_AHEAD]
+        lane.waypoints = self.base_waypoints.waypoints[closest_idx + WPS_OFFSET_INFRONT_CAR:last_idx:2]
 
         if closest_idx <= self.obstacle_wp_id <= last_idx:
             lane.waypoints = self.decelerate_waypoints(lane.waypoints)
@@ -118,6 +123,9 @@ class WaypointUpdater(object):
         :return: styx_msgs.msg.Lane with coordinates and desired velocities
         """
         lane = []
+        if not waypoints or len(waypoints) == 0:
+            return lane
+
         pts_before_end = 2 # leave several points ahead as we are counting from the middle of the car
         total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end - 1) # total distance to obstacle
         start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
