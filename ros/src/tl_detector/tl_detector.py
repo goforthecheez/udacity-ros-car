@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import math
 import sys
 import rospy
@@ -15,8 +16,9 @@ import yaml
 from scipy.spatial import KDTree
 import numpy as np
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
 SKIPPING_DURATION = 0.5 # time in seconds to wait until next camera image will be processed
+MAX_WP_DISTANCE_TO_CLASSIFY_TL = 100
 
 class TLDetector(object):
 
@@ -115,8 +117,8 @@ class TLDetector(object):
                 self.timestamp_before = timestamp_now
                 self.skipping_duration += rospy.Duration(SKIPPING_DURATION) - time_elapsed
 
-        self.has_image = True
         self.camera_image = msg
+        self.has_image = True
         stop_line_wp, state = self.process_traffic_lights()
         # if state == 0:
         # rospy.logwarn("Traffic light: pt=%s, state=%s", stop_line_wp, state)
@@ -153,14 +155,16 @@ class TLDetector(object):
         if self.is_testing:
             return light.state
 
-        if(not self.has_image):
-            self.prev_light_loc = None
+        if not self.has_image:
+            #self.prev_light_loc = None
+            rospy.logwarn("Camera not ready yet...")
             return TrafficLight.UNKNOWN
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
         # Get classification
         classification = self.light_classifier.get_classification(cv_image)
+        self.has_image = False    # Reset; so we only classify new images.
         return classification
 
     def process_traffic_lights(self):
@@ -185,13 +189,21 @@ class TLDetector(object):
                 # self.lights is in order. Return as soon as we see the first traffic
                 # light (stop line) past the car's position.
                 if stop_line_wp_idx > car_wp_idx:
-                    return stop_line_wp_idx, self.get_light_state(self.lights[i])
+                    if (stop_line_wp_idx - car_wp_idx) < MAX_WP_DISTANCE_TO_CLASSIFY_TL:
+                        return stop_line_wp_idx, self.get_light_state(self.lights[i])
+                    else:
+                        #rospy.logwarn("Request to process traffic light, but it is too far.")
+                        return -1, TrafficLight.UNKNOWN
 
             if len(self.lights):  # waypoint is further than last light - let's loop
                 stop_x, stop_y = self.stop_line_positions[0]
                 # Car should stop *before* the stop line.
                 stop_line_wp_idx = (self.get_closest_waypoint_xy(stop_x, stop_y) - 1) % len(self.waypoints.waypoints)
-                return stop_line_wp_idx, self.get_light_state(self.lights[0])
+                if (stop_line_wp_idx - car_wp_idx) % len(self.waypoints.waypoints) < MAX_WP_DISTANCE_TO_CLASSIFY_TL:
+                    return stop_line_wp_idx, self.get_light_state(self.lights[0])
+                else:
+                    #rospy.logwarn("Request to process traffic light, but it is too far.")
+                    return -1, TrafficLight.UNKNOWN
 
         return -1, TrafficLight.UNKNOWN
 

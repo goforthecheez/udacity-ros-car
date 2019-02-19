@@ -13,7 +13,7 @@ class TLClassifier(object):
             PATH_TO_GRAPH = r'light_classification/models/ssd_i_coco/sim/frozen_inference_graph.pb'
 
         self.graph = tf.Graph()
-        self.threshold = .5
+        self.threshold = 0.15
 
         with self.graph.as_default():
             od_graph_def = tf.GraphDef()
@@ -49,19 +49,27 @@ class TLClassifier(object):
         boxes = np.squeeze(boxes)
         scores = np.squeeze(scores)
         classes = np.squeeze(classes).astype(np.int32)
-        
-        if scores[0] > self.threshold:
-            if classes[0] == 1:
-                color = TrafficLight.GREEN
-            elif classes[0] == 2:
-                color = TrafficLight.RED
-            elif classes[0] == 3:
-                color = TrafficLight.YELLOW
-        else:
-            color = TrafficLight.UNKNOWN
 
-        end = time.time()
-        elapsed = end - start
+        #rospy.logwarn("classes: {}".format(' '.join([str(c) for c in classes])))
+        #rospy.logwarn("scores: {}".format(' '.join([str(s) for s in scores])))
+
+        colors = [TrafficLight.GREEN, TrafficLight.RED, TrafficLight.YELLOW]
+        counts = [0] * 3
+        for i, s in enumerate(scores):
+            if s > self.threshold:
+                if classes[i] == 1:  # green
+                    counts[0] = counts[0] + 1
+                elif classes[i] == 2:  # red
+                    counts[1] = counts[1] + 1
+                elif classes[i] == 3:  # yellow
+                    counts[2] = counts[2] + 1
+        max_idx = np.argmax(counts)
+        if counts[max_idx] == 0:
+            color = TrafficLight.UNKNOWN
+        else:
+            color = colors[max_idx]
+
+        elapsed = time.time() - start
         rospy.logwarn("Traffic light color is {} | Time elapsed: {} sec".format(color, elapsed))
         return color
 
