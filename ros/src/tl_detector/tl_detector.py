@@ -165,7 +165,6 @@ class TLDetector(object):
         # Get classification
         classification = self.light_classifier.get_classification(cv_image)
         self.has_image = False    # Reset; so we only classify new images.
-        self.camera_image = None
         return classification
 
     def process_traffic_lights(self):
