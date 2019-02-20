@@ -8,7 +8,11 @@ class TLClassifier(object):
     def __init__(self, is_site):
         
         if is_site:
+            # ssd_inception_v2_coco_2017_11_17 Model with 20000 steps on Udacity site data
             PATH_TO_GRAPH = r'light_classification/models/ssd_i_coco/real/frozen_inference_graph.pb'
+            # faster_rcnn_inception_v2_coco_2018_01_28 Model with 10000 steps on Udacity site data
+            # More accurate than ssd inception but slower - choose ssd inception is enough for Udacity site.
+            #PATH_TO_GRAPH = r'light_classification/models/frcnn/frozen_inference_graph.pb'
         else:
             PATH_TO_GRAPH = r'light_classification/models/ssd_i_coco/sim/frozen_inference_graph.pb'
 
