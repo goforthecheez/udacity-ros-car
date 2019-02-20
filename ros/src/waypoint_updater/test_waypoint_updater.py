@@ -17,12 +17,12 @@
 PKG = 'waypoint_updater'
 import unittest
 
-from waypoint_updater import WaypointUpdater
+from waypoint_updater import WaypointUpdater, LOOKAHEAD_WPS, WPS_OFFSET_INFRONT_CAR
 
 from styx_msgs.msg import Lane, Waypoint
 from std_msgs.msg import Int32
 
-N_WPS = 10
+N_WPS = 100
 
 
 class TestDeceleration(unittest.TestCase):
@@ -45,18 +45,18 @@ class TestDeceleration(unittest.TestCase):
     def test_no_decel(self):
         lane = self.wpu.plan_lane(0)
 
-        self.assertEqual(len(lane.waypoints), N_WPS)
+        self.assertEqual(len(lane.waypoints), min(N_WPS, LOOKAHEAD_WPS) - WPS_OFFSET_INFRONT_CAR)
         self.assertEqual(lane.waypoints[0].twist.twist.linear.x, lane.waypoints[1].twist.twist.linear.x)
         self.assertEqual(lane.waypoints[3].twist.twist.linear.x, lane.waypoints[4].twist.twist.linear.x)
 
     def test_decel_basic(self):
-        self.wpu.obstacle_wp_id = 7
+        self.wpu.obstacle_wp_id = 70
 
         lane = self.wpu.plan_lane(0)
 
-        self.assertEqual(len(lane.waypoints), 7)
-        self.assertGreater(lane.waypoints[0].twist.twist.linear.x, lane.waypoints[1].twist.twist.linear.x)
-        self.assertGreater(lane.waypoints[1].twist.twist.linear.x, lane.waypoints[2].twist.twist.linear.x)
+        self.assertEqual(len(lane.waypoints), 70 - WPS_OFFSET_INFRONT_CAR)
+        self.assertGreater(lane.waypoints[50].twist.twist.linear.x, lane.waypoints[51].twist.twist.linear.x)
+        self.assertGreater(lane.waypoints[61].twist.twist.linear.x, lane.waypoints[62].twist.twist.linear.x)
 
     # obstale waypoint is far away
     def test_decel_too_far(self):
@@ -64,7 +64,7 @@ class TestDeceleration(unittest.TestCase):
 
         lane = self.wpu.plan_lane(0)
 
-        self.assertEqual(len(lane.waypoints), N_WPS)
+        self.assertEqual(len(lane.waypoints), min(N_WPS, LOOKAHEAD_WPS) - WPS_OFFSET_INFRONT_CAR)
         self.assertEqual(lane.waypoints[0].twist.twist.linear.x, lane.waypoints[1].twist.twist.linear.x)
         self.assertEqual(lane.waypoints[3].twist.twist.linear.x, lane.waypoints[4].twist.twist.linear.x)
 
@@ -74,7 +74,7 @@ class TestDeceleration(unittest.TestCase):
 
         lane = self.wpu.plan_lane(1)
 
-        self.assertEqual(len(lane.waypoints), N_WPS - 1)
+        self.assertEqual(len(lane.waypoints), min(N_WPS, LOOKAHEAD_WPS) - WPS_OFFSET_INFRONT_CAR)
         self.assertEqual(lane.waypoints[0].twist.twist.linear.x, lane.waypoints[1].twist.twist.linear.x)
         self.assertEqual(lane.waypoints[2].twist.twist.linear.x, lane.waypoints[3].twist.twist.linear.x)
 
@@ -85,11 +85,22 @@ class TestDeceleration(unittest.TestCase):
 
         lane = self.wpu.plan_lane(0)
 
-        self.assertEqual(len(lane.waypoints), obtacle_idx)
-        self.assertEqual(lane.waypoints[obtacle_idx - 1].twist.twist.linear.x, 0.0)
-        self.assertEqual(lane.waypoints[obtacle_idx - 1].twist.twist.linear.x, lane.waypoints[obtacle_idx - 2].twist.twist.linear.x)
+        ln = obtacle_idx - WPS_OFFSET_INFRONT_CAR
+        self.assertEqual(len(lane.waypoints), ln)
+        self.assertEqual(lane.waypoints[ln - 1].twist.twist.linear.x, 0.0)
+        self.assertEqual(lane.waypoints[ln - 1].twist.twist.linear.x, lane.waypoints[ln - 2].twist.twist.linear.x)
 
         # self.assertGreater(lane.waypoints[2].twist.twist.linear.x, lane.waypoints[3].twist.twist.linear.x)
+
+    # loop case
+    def test_loop(self):
+        self.wpu.obstacle_wp_id = -1
+        self.wpu.base_waypoints.waypoints = self.wpu.base_waypoints.waypoints[:int(LOOKAHEAD_WPS * 0.75)]
+
+        lane = self.wpu.plan_lane(0)
+
+        self.assertEqual(len(lane.waypoints), LOOKAHEAD_WPS)
+
 
     def test_obstacle_reset(self):
         self.wpu.obstacle_wp_id = 3

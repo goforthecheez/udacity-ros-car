@@ -103,9 +103,10 @@ class WaypointUpdater(object):
 
         last_idx = closest_idx + LOOKAHEAD_WPS
         if self.obstacle_wp_id > closest_idx:
-            last_idx = min(closest_idx + LOOKAHEAD_WPS, self.obstacle_wp_id) #TODO fix for circle case
+            last_idx = min(last_idx, self.obstacle_wp_id)
 
-        lane.waypoints = self.base_waypoints.waypoints[closest_idx + WPS_OFFSET_INFRONT_CAR:last_idx:2]
+        lane.waypoints = self.base_waypoints.waypoints[closest_idx + WPS_OFFSET_INFRONT_CAR:last_idx]
+        # rospy.logwarn("Last wps: %s", last_idx)
 
         if closest_idx <= self.obstacle_wp_id <= last_idx:
             lane.waypoints = self.decelerate_waypoints(lane.waypoints)
@@ -166,9 +167,9 @@ class WaypointUpdater(object):
         :param end: parameters at end point
         :return: 6 coefficients for the polinom
         """
-        T3 = T*T*T;
-        T4 = T*T*T*T;
-        T5 = T*T*T*T*T;
+        T3 = T*T*T
+        T4 = T*T*T*T
+        T5 = T*T*T*T*T
 
         a = np.array([[T3, T4, T5],[3*T*T, 4*T3, 5*T4],[6*T, 12*T*T, 20*T3]])
 
@@ -203,7 +204,7 @@ class WaypointUpdater(object):
         """
         if msg.data and msg.data >= 0:
             self.obstacle_wp_id = msg.data
-            rospy.logdebug('Obstacle received idx=%s', self.obstacle_wp_id)
+            rospy.logwarn('Obstacle received idx=%s', self.obstacle_wp_id)
         else:
             self.obstacle_wp_id = None
 
