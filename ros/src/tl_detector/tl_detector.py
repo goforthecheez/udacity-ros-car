@@ -52,6 +52,11 @@ class TLDetector(object):
             config_string = rospy.get_param("/traffic_light_config")
             self.config = yaml.load(config_string)
             self.light_classifier = TLClassifier(self.config['is_site'])
+            # try to run classifier the first time with the booster image
+            # - It will increase performance for the first time classification
+            booster_image = cv2.imread(r'boost_image/booster.jpg')
+            self.light_classifier.get_classification(booster_image)
+            
             # List of positions that correspond to the line to stop in front of
             # for a given intersection
             self.stop_line_positions = self.config['stop_line_positions']
