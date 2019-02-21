@@ -2,7 +2,7 @@
 
 Team that worked on the Udacity Capstone Project for Self-Driving Car Engineer Nanodegree
 
-* (TL) Adeline Wong <goforthecheez@gmail.com>
+* (TL) Adeline Wong <adelinew@alumni.stanford.edu>
 * Hiep Tang <tpthiep@gmail.com>
 * Andrew Garkavyi <andrew.gawy@gmail.com>
 * Torsten Karch <karch@gmx.de>
