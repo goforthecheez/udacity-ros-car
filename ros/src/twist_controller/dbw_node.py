@@ -8,7 +8,7 @@ import math
 
 from twist_controller import Controller
 
-DBW_UPDATE_FREQUENCY = 20
+DBW_UPDATE_FREQUENCY = 50
 
 '''
 You can build this node only after you have built (or partially built) the `waypoint_updater` node.
