@@ -54,19 +54,20 @@ class Controller(object):
 
         throttle = self.throttle_controller.step(vel_error, sample_time)
 
-        if ((linear_velocity < 0.02) and (current_velocity < 0.1)):
+        if (linear_velocity < 0.02) and (current_velocity < 0.1):
             throttle = 0.0
             brake = 700.0 # hold Carla in place
             self.brake_lpf_reinit = True
-        elif ((throttle < 0.1) and (vel_error < 0.0)):
-            if (self.brake_lpf_reinit == True):
+        elif (throttle < 0.1) and (vel_error < 0.0):
+            if self.brake_lpf_reinit:
                 self.brake_lpf = LowPassFilter(self.tau, self.ts)
                 self.brake_lpf.filt(0.0)
                 self.brake_lpf_reinit = False
             throttle = 0.0
             decel = max(vel_error, self.decel_limit)
             brake = abs(decel)*self.vehicle_mass*self.wheel_radius
-            brake = self.brake_lpf.filt(brake/max(9.81 + vel_error/2.0, 1.0))
+            # Thinking about Low Pass Filter - do we need it on brake calculation?
+            # brake = self.brake_lpf.filt(brake/max(9.81 + vel_error/2.0, 1.0))
         else:
             brake = 0.0
             self.brake_lpf_reinit = True
