@@ -27,7 +27,7 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
 DECEL_AT_STOP = -0.7 # how fast shall we decelerate at the last point, m/s
 DECEL_AT_START = -0.05
-WPS_OFFSET_INFRONT_CAR = 0
+WPS_OFFSET_INFRONT_CAR = 1
 
 WPU_UPDATE_FREQUENCY = 20
 
