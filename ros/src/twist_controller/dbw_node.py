@@ -64,6 +64,8 @@ class DBWNode(object):
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
+        rospy.Subscriber('/debug/dbw_increment', Bool, self.debug_inc_dbw)
+
         if not self.dbw_enabled:
             rospy.logwarn('DBW is OFF. If you are running on simulator - just turn the Manual mode OFF to enable DBW')
         self.loop()
@@ -132,6 +134,10 @@ class DBWNode(object):
         """
         self.current_velocity = msg.twist.linear.x
         # rospy.logdebug('CB velocity=%s', self.current_velocity)
+
+    def debug_inc_dbw(self, msg):
+        rospy.logwarn("Debug: inc command arrived")
+        self.controller.debug_inc()
 
 if __name__ == '__main__':
     DBWNode()

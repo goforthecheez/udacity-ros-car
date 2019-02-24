@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
-import rospy
-from geometry_msgs.msg import PoseStamped, PointStamped
-from styx_msgs.msg import Lane, Waypoint
-from std_msgs.msg import Bool, Int32
-from scipy.spatial import KDTree
-import numpy as np
-import sys
-
 import math
+
+import numpy as np
+import rospy
+from geometry_msgs.msg import PoseStamped
+from scipy.spatial import KDTree
+from std_msgs.msg import Int32, Bool
+from styx_msgs.msg import Lane, Waypoint
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -26,9 +25,9 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
-DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s
+DECEL_AT_STOP = -0.7 # how fast shall we decelerate at the last point, m/s
 DECEL_AT_START = -0.05
-WPS_OFFSET_INFRONT_CAR = 4
+WPS_OFFSET_INFRONT_CAR = 0
 
 WPU_UPDATE_FREQUENCY = 20
 
@@ -42,6 +41,8 @@ class WaypointUpdater(object):
 
         self.plot_time = 0 # for debug purposes
 
+        self.test_interval_start_time = None # for test
+
         if not init_for_test:
             rospy.init_node('waypoint_updater')
 
@@ -50,6 +51,8 @@ class WaypointUpdater(object):
 
             # to manualy publish: rostopic pub -1 /traffic_waypoint std_msgs/Int32 '400'
             rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+
+            self.debug_dbw_inc = rospy.Publisher('/debug/dbw_increment', Bool, queue_size=1)
 
             self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -60,8 +63,16 @@ class WaypointUpdater(object):
         while not rospy.is_shutdown():
             if self.pose and self.waypoint_tree: #tree is constructed later than base_waypoints are set, prevents races
                 t1 = rospy.get_rostime()
+
                 # Get closest waypoint
                 closest_waypoint_idx = self.get_closest_waypoint_idx()
+
+                # # test code to stop every 19 seconds
+                # if self.test_interval_start_time is None or (t1 - self.test_interval_start_time).secs > 20:
+                #     self.test_interval_start_time = t1
+                #     self.obstacle_wp_id = closest_waypoint_idx + 30
+                #     self.debug_dbw_inc.publish(True)
+
                 # rospy.logdebug('Nearest waypoint: %s', closest_waypoint_idx)
                 self.publish_waypoints(closest_waypoint_idx)
 
@@ -109,7 +120,7 @@ class WaypointUpdater(object):
         # rospy.logwarn("Last wps: %s", last_idx)
 
         if closest_idx <= self.obstacle_wp_id <= last_idx:
-            lane.waypoints = self.decelerate_waypoints(lane.waypoints)
+            lane.waypoints = self.decelerate_waypoints(lane.waypoints, self.base_waypoints.waypoints[closest_idx].twist.twist.linear.x)
             # if self.plot_time < rospy.get_rostime().secs:
             #     self.plot_velocity(lane, rospy.get_rostime())
             #     self.plot_time = rospy.get_rostime().secs
@@ -117,7 +128,7 @@ class WaypointUpdater(object):
 
         return lane
 
-    def decelerate_waypoints(self, waypoints):
+    def decelerate_waypoints(self, waypoints, base_velocity):
         """
         Gradually reduce speed of waypoints to full stop. Sqrt function is used right now - not very smooth.
         :param waypoints: list of waypoints which velocities will be decelerate to a full stop
@@ -128,8 +139,9 @@ class WaypointUpdater(object):
             return lane
 
         pts_before_end = 2 # leave several points ahead as we are counting from the middle of the car
-        total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end - 1) # total distance to obstacle
-        start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
+        total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end) # total distance to obstacle
+        # start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
+        start_vel = base_velocity
         start_vel_kmh = start_vel * 3.6
         stop_d = start_vel_kmh * 2.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
@@ -142,7 +154,7 @@ class WaypointUpdater(object):
 
             dist = self.distance(waypoints, 0, i)
 
-            vel = self.jerk_safe_polynom_value(dist - (total_dist - stop_d), coefs)
+            vel = self.jerk_safe_polynom_value(stop_d - (total_dist - dist), coefs)
 
             if vel < 0.05:
                 vel = 0

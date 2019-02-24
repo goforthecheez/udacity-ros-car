@@ -92,16 +92,6 @@ class TestDeceleration(unittest.TestCase):
 
         # self.assertGreater(lane.waypoints[2].twist.twist.linear.x, lane.waypoints[3].twist.twist.linear.x)
 
-    # loop case
-    def test_loop(self):
-        self.wpu.obstacle_wp_id = -1
-        self.wpu.base_waypoints.waypoints = self.wpu.base_waypoints.waypoints[:int(LOOKAHEAD_WPS * 0.75)]
-
-        lane = self.wpu.plan_lane(0)
-
-        self.assertEqual(len(lane.waypoints), LOOKAHEAD_WPS)
-
-
     def test_obstacle_reset(self):
         self.wpu.obstacle_wp_id = 3
 
