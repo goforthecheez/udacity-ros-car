@@ -27,7 +27,7 @@ class Controller(object):
 
         self.kd_mul = -1.0 #for test purposes
         self.kb = vehicle_mass * wheel_radius
-        self.brake_controller = PID(-3.0*self.kb, 0.0, -1.5*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
+        self.brake_controller = PID(-3.0*self.kb, 0.0, -0.16*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
         # -3.45*
 
         self.vehicle_mass = vehicle_mass
