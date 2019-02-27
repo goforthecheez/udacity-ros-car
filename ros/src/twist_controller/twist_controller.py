@@ -3,7 +3,6 @@ from lowpass import LowPassFilter
 from pid import PID
 import rospy
 import time
-import csv
 
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
@@ -27,7 +26,7 @@ class Controller(object):
 
         self.kd_mul = -1.0 #for test purposes
         self.kb = vehicle_mass * wheel_radius
-        self.brake_controller = PID(-3.0*self.kb, 0.0, -0.16*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
+        self.brake_controller = PID(-0.3*self.kb, -0.01*self.kb, 0.005*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
         # -3.45*
 
         self.vehicle_mass = vehicle_mass
