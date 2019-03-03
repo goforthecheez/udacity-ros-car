@@ -25,8 +25,8 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
-DECEL_AT_STOP = -0.7 # how fast shall we decelerate at the last point, m/s
-DECEL_AT_START = -0.05
+DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s. Setting too high angle can lead to waves in polynomial form
+DECEL_AT_START = 0.0 #this should always be balanced with stop velocity otherwise we will get waves
 WPS_OFFSET_INFRONT_CAR = 1
 
 WPU_UPDATE_FREQUENCY = 20
@@ -143,10 +143,12 @@ class WaypointUpdater(object):
         # start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
         start_vel = base_velocity
         start_vel_kmh = start_vel * 3.6
-        stop_d = start_vel_kmh * 2.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
+        stop_d = start_vel_kmh * 1.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
         start_params = [start_vel, DECEL_AT_START, 0] # velocity, acceleration, jerk - derivatives of velocity
         coefs = self.gen_jerk_safe_poly(stop_d, start_params, [0, DECEL_AT_STOP, 0])
+        # sys.stderr.write("coeffs: y={:.3f}+{:.3f}*d+{:.3f}*d^2+{:.8f}*d^3+{:.8f}*d^4+{:.8f}*d^5\n".format(coefs[0],coefs[1],coefs[2],coefs[3],coefs[4],coefs[5])) #Desmos friendly format
+        # sys.stderr.write("stop_d={}, total={}\n".format(stop_d, total_dist))
 
         for i, wp in enumerate(waypoints):
             p = Waypoint()
@@ -154,11 +156,15 @@ class WaypointUpdater(object):
 
             dist = self.distance(waypoints, 0, i)
 
-            vel = self.jerk_safe_polynom_value(stop_d - (total_dist - dist), coefs)
+            polynom_x = stop_d - (total_dist - dist)
+            if polynom_x > 0:
+                vel = self.jerk_safe_polynom_value(polynom_x, coefs)
+                if vel < 0.05:
+                    vel = 0
+                vel = min(vel, wp.twist.twist.linear.x)
+            else:
+                vel = wp.twist.twist.linear.x
 
-            if vel < 0.05:
-                vel = 0
-            vel = min(vel, wp.twist.twist.linear.x)
             p.twist.twist.linear.x = vel
             # sys.stderr.write('Twist: dist={}, vel={}, final={} \n'.format(dist, vel, p.twist.twist.linear.x))
             lane.append(p)
