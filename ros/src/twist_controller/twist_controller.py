@@ -26,8 +26,7 @@ class Controller(object):
 
         self.kd_mul = -1.0 #for test purposes
         self.kb = vehicle_mass * wheel_radius
-        self.brake_controller = PID(-0.3*self.kb, -0.01*self.kb, 0.005*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
-        # -3.45*
+        self.brake_controller = PID(-0.3*self.kb, -0.026*self.kb, -0.0125*self.kb, 0, abs(decel_limit) * vehicle_mass * wheel_radius)
 
         self.vehicle_mass = vehicle_mass
         self.decel_limit = decel_limit
@@ -58,13 +57,13 @@ class Controller(object):
         sample_time = cur_time - self.last_sample_time
         self.last_sample_time = cur_time
 
-        throttle = self.throttle_controller.step(vel_error, sample_time)
+        throttle = self.throttle_controller.step(vel_error, sample_time) if vel_error > 0.0 else 0.0
 
         if (linear_velocity < 0.02) and (current_velocity < 0.1):
             throttle = 0.0
             brake = 700.0 # hold Carla in place
             self.brake_controller.reset()
-        elif (throttle < 0.1) and (vel_error < 0.0):
+        elif vel_error < -0.2:
             throttle = 0.0
             brake = self.brake_controller.step(vel_error, sample_time)
         else:
