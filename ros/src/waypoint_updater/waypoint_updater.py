@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
-import rospy
-from geometry_msgs.msg import PoseStamped, PointStamped
-from styx_msgs.msg import Lane, Waypoint
-from std_msgs.msg import Bool, Int32
-from scipy.spatial import KDTree
-import numpy as np
-import sys
-
 import math
+
+import numpy as np
+import rospy
+from geometry_msgs.msg import PoseStamped
+from scipy.spatial import KDTree
+from std_msgs.msg import Int32, Bool
+from styx_msgs.msg import Lane, Waypoint
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -25,10 +24,10 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
-DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s
-DECEL_AT_START = -0.05
-WPS_OFFSET_INFRONT_CAR = 4
+LOOKAHEAD_WPS = 50  # Number of waypoints we will publish. You can change this number
+DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s. Setting too high angle can lead to waves in polynomial form
+DECEL_AT_START = 0.0 #this should always be balanced with stop velocity otherwise we will get waves
+WPS_OFFSET_INFRONT_CAR = 1
 
 WPU_UPDATE_FREQUENCY = 20
 
@@ -42,6 +41,8 @@ class WaypointUpdater(object):
 
         self.plot_time = 0 # for debug purposes
 
+        self.test_interval_start_time = None # for test
+
         if not init_for_test:
             rospy.init_node('waypoint_updater')
 
@@ -50,6 +51,8 @@ class WaypointUpdater(object):
 
             # to manualy publish: rostopic pub -1 /traffic_waypoint std_msgs/Int32 '400'
             rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+
+            self.debug_dbw_inc = rospy.Publisher('/debug/dbw_increment', Bool, queue_size=1)
 
             self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -60,8 +63,16 @@ class WaypointUpdater(object):
         while not rospy.is_shutdown():
             if self.pose and self.waypoint_tree: #tree is constructed later than base_waypoints are set, prevents races
                 t1 = rospy.get_rostime()
+
                 # Get closest waypoint
                 closest_waypoint_idx = self.get_closest_waypoint_idx()
+
+                # # test code to stop every 19 seconds
+                # if self.test_interval_start_time is None or (t1 - self.test_interval_start_time).secs > 20:
+                #     self.test_interval_start_time = t1
+                #     self.obstacle_wp_id = closest_waypoint_idx + 30
+                #     self.debug_dbw_inc.publish(True)
+
                 # rospy.logdebug('Nearest waypoint: %s', closest_waypoint_idx)
                 self.publish_waypoints(closest_waypoint_idx)
 
@@ -109,7 +120,7 @@ class WaypointUpdater(object):
         # rospy.logwarn("Last wps: %s", last_idx)
 
         if closest_idx <= self.obstacle_wp_id <= last_idx:
-            lane.waypoints = self.decelerate_waypoints(lane.waypoints)
+            lane.waypoints = self.decelerate_waypoints(lane.waypoints, self.base_waypoints.waypoints[closest_idx].twist.twist.linear.x)
             # if self.plot_time < rospy.get_rostime().secs:
             #     self.plot_velocity(lane, rospy.get_rostime())
             #     self.plot_time = rospy.get_rostime().secs
@@ -117,7 +128,7 @@ class WaypointUpdater(object):
 
         return lane
 
-    def decelerate_waypoints(self, waypoints):
+    def decelerate_waypoints(self, waypoints, base_velocity):
         """
         Gradually reduce speed of waypoints to full stop. Sqrt function is used right now - not very smooth.
         :param waypoints: list of waypoints which velocities will be decelerate to a full stop
@@ -127,26 +138,35 @@ class WaypointUpdater(object):
         if not waypoints or len(waypoints) == 0:
             return lane
 
-        pts_before_end = 2 # leave several points ahead as we are counting from the middle of the car
-        total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end - 1) # total distance to obstacle
-        start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
+        pts_before_end = 5 # leave several points ahead as we are counting from the middle of the car
+        total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end) # total distance to obstacle
+        # start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
+        start_vel = base_velocity
         start_vel_kmh = start_vel * 3.6
-        stop_d = start_vel_kmh * 2.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
+        stop_d = start_vel_kmh * 1.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
-        start_params = [start_vel, DECEL_AT_START, 0] # velocity, acceleration, jerk - derivatives of velocity
-        coefs = self.gen_jerk_safe_poly(stop_d, start_params, [0, DECEL_AT_STOP, 0])
-
+        start_params = [0, start_vel, 0] # position, velocity, acceleration - derivatives of position
+        end_params = [total_dist, 0, 0]
+        coefs = self.gen_jerk_safe_poly((base_velocity/3.0) * total_dist/base_velocity, start_params, end_params)
+        # sys.stderr.write("coeffs: y={:.3f}+{:.3f}*d+{:.3f}*d^2+{:.8f}*d^3+{:.8f}*d^4+{:.8f}*d^5\n".format(coefs[0],coefs[1],coefs[2],coefs[3],coefs[4],coefs[5])) #Desmos friendly format
+        # sys.stderr.write("stop_d={}, total={}\n".format(stop_d, total_dist))
+        total_time = 0.0
+        curr_vel = base_velocity
         for i, wp in enumerate(waypoints):
             p = Waypoint()
             p.pose = wp.pose
 
             dist = self.distance(waypoints, 0, i)
+            dist_incre = self.distance(waypoints, i-1, i)
+            total_time = total_time + dist_incre/curr_vel
 
-            vel = self.jerk_safe_polynom_value(dist - (total_dist - stop_d), coefs)
-
-            if vel < 0.05:
+            polynom_x = total_time
+            if dist <= total_dist:
+                vel = self.jerk_safe_polynom_value(polynom_x, coefs)
+                curr_vel = vel
+            else:
                 vel = 0
-            vel = min(vel, wp.twist.twist.linear.x)
+
             p.twist.twist.linear.x = vel
             # sys.stderr.write('Twist: dist={}, vel={}, final={} \n'.format(dist, vel, p.twist.twist.linear.x))
             lane.append(p)
@@ -178,7 +198,7 @@ class WaypointUpdater(object):
                          end[2] - start[2]])
 
 
-        x = np.linalg.solve(a, b)
+        x = np.linalg.lstsq(a, b)[0]
         # for xi in x:
         #     print("{:.6f}".format(xi.item()))
         return [start[0], start[1], start[2], x[0], x[1], x[2]]

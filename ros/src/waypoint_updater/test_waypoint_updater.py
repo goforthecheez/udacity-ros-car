@@ -13,6 +13,7 @@
 # catkin_make run_tests
 # or just simple
 # python -m unittest discover -s src/waypoint_updater
+TARGET_VELOCITY = 5.3
 
 PKG = 'waypoint_updater'
 import unittest
@@ -38,7 +39,7 @@ class TestDeceleration(unittest.TestCase):
             wp.pose.pose.position.x = pt
             wp.pose.pose.position.y = pt
 
-            wp.twist.twist.linear.x = 5.3
+            wp.twist.twist.linear.x = TARGET_VELOCITY
 
             self.base_wps.waypoints.append(wp)
 
@@ -55,8 +56,17 @@ class TestDeceleration(unittest.TestCase):
         lane = self.wpu.plan_lane(0)
 
         self.assertEqual(len(lane.waypoints), 70 - WPS_OFFSET_INFRONT_CAR)
+        self.assertEqual(lane.waypoints[0].twist.twist.linear.x, TARGET_VELOCITY)
+        self.assertEqual(lane.waypoints[10].twist.twist.linear.x, TARGET_VELOCITY)
+        self.assertEqual(lane.waypoints[20].twist.twist.linear.x, TARGET_VELOCITY)
+        self.assertEqual(lane.waypoints[30].twist.twist.linear.x, TARGET_VELOCITY)
+        self.assertEqual(lane.waypoints[40].twist.twist.linear.x, TARGET_VELOCITY)
+        self.assertGreater(lane.waypoints[45].twist.twist.linear.x, lane.waypoints[47].twist.twist.linear.x)
         self.assertGreater(lane.waypoints[50].twist.twist.linear.x, lane.waypoints[51].twist.twist.linear.x)
+        self.assertGreater(lane.waypoints[58].twist.twist.linear.x, lane.waypoints[59].twist.twist.linear.x)
         self.assertGreater(lane.waypoints[61].twist.twist.linear.x, lane.waypoints[62].twist.twist.linear.x)
+        self.assertEqual(lane.waypoints[70 - WPS_OFFSET_INFRONT_CAR - 1].twist.twist.linear.x, lane.waypoints[70 - WPS_OFFSET_INFRONT_CAR - 2].twist.twist.linear.x)
+        self.assertEqual(lane.waypoints[70 - WPS_OFFSET_INFRONT_CAR - 1].twist.twist.linear.x, 0.0)
 
     # obstale waypoint is far away
     def test_decel_too_far(self):
@@ -91,16 +101,6 @@ class TestDeceleration(unittest.TestCase):
         self.assertEqual(lane.waypoints[ln - 1].twist.twist.linear.x, lane.waypoints[ln - 2].twist.twist.linear.x)
 
         # self.assertGreater(lane.waypoints[2].twist.twist.linear.x, lane.waypoints[3].twist.twist.linear.x)
-
-    # loop case
-    def test_loop(self):
-        self.wpu.obstacle_wp_id = -1
-        self.wpu.base_waypoints.waypoints = self.wpu.base_waypoints.waypoints[:int(LOOKAHEAD_WPS * 0.75)]
-
-        lane = self.wpu.plan_lane(0)
-
-        self.assertEqual(len(lane.waypoints), LOOKAHEAD_WPS)
-
 
     def test_obstacle_reset(self):
         self.wpu.obstacle_wp_id = 3
