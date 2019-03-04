@@ -138,7 +138,7 @@ class WaypointUpdater(object):
         if not waypoints or len(waypoints) == 0:
             return lane
 
-        pts_before_end = 8 # leave several points ahead as we are counting from the middle of the car
+        pts_before_end = 5 # leave several points ahead as we are counting from the middle of the car
         total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end) # total distance to obstacle
         # start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
         start_vel = base_velocity
@@ -147,7 +147,7 @@ class WaypointUpdater(object):
 
         start_params = [0, start_vel, 0] # position, velocity, acceleration - derivatives of position
         end_params = [total_dist, 0, 0]
-        coefs = self.gen_jerk_safe_poly(3.0 * total_dist/base_velocity, start_params, end_params)
+        coefs = self.gen_jerk_safe_poly((base_velocity/3.0) * total_dist/base_velocity, start_params, end_params)
         # sys.stderr.write("coeffs: y={:.3f}+{:.3f}*d+{:.3f}*d^2+{:.8f}*d^3+{:.8f}*d^4+{:.8f}*d^5\n".format(coefs[0],coefs[1],coefs[2],coefs[3],coefs[4],coefs[5])) #Desmos friendly format
         # sys.stderr.write("stop_d={}, total={}\n".format(stop_d, total_dist))
         total_time = 0.0
@@ -164,9 +164,6 @@ class WaypointUpdater(object):
             if dist <= total_dist:
                 vel = self.jerk_safe_polynom_value(polynom_x, coefs)
                 curr_vel = vel
-                if vel < 0.05:
-                    vel = 0
-
             else:
                 vel = 0
 
