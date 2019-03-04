@@ -24,7 +24,7 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 70  # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 50  # Number of waypoints we will publish. You can change this number
 DECEL_AT_STOP = -0.3 # how fast shall we decelerate at the last point, m/s. Setting too high angle can lead to waves in polynomial form
 DECEL_AT_START = 0.0 #this should always be balanced with stop velocity otherwise we will get waves
 WPS_OFFSET_INFRONT_CAR = 1
@@ -138,32 +138,37 @@ class WaypointUpdater(object):
         if not waypoints or len(waypoints) == 0:
             return lane
 
-        pts_before_end = 2 # leave several points ahead as we are counting from the middle of the car
+        pts_before_end = 8 # leave several points ahead as we are counting from the middle of the car
         total_dist = self.distance(waypoints, 0, len(waypoints) - pts_before_end) # total distance to obstacle
         # start_vel = waypoints[0].twist.twist.linear.x #velocity of the car at the start of trajectory
         start_vel = base_velocity
         start_vel_kmh = start_vel * 3.6
         stop_d = start_vel_kmh * 1.0 # just an assumption that safe stop distance is equal to your speed value (but in meters)
 
-        start_params = [start_vel, DECEL_AT_START, 0] # velocity, acceleration, jerk - derivatives of velocity
-        coefs = self.gen_jerk_safe_poly(stop_d, start_params, [0, DECEL_AT_STOP, 0])
+        start_params = [0, start_vel, 0] # position, velocity, acceleration - derivatives of position
+        end_params = [total_dist, 0, 0]
+        coefs = self.gen_jerk_safe_poly(3.0 * total_dist/base_velocity, start_params, end_params)
         # sys.stderr.write("coeffs: y={:.3f}+{:.3f}*d+{:.3f}*d^2+{:.8f}*d^3+{:.8f}*d^4+{:.8f}*d^5\n".format(coefs[0],coefs[1],coefs[2],coefs[3],coefs[4],coefs[5])) #Desmos friendly format
         # sys.stderr.write("stop_d={}, total={}\n".format(stop_d, total_dist))
-
+        total_time = 0.0
+        curr_vel = base_velocity
         for i, wp in enumerate(waypoints):
             p = Waypoint()
             p.pose = wp.pose
 
             dist = self.distance(waypoints, 0, i)
+            dist_incre = self.distance(waypoints, i-1, i)
+            total_time = total_time + dist_incre/curr_vel
 
-            polynom_x = stop_d - (total_dist - dist)
-            if polynom_x > 0:
+            polynom_x = total_time
+            if dist <= total_dist:
                 vel = self.jerk_safe_polynom_value(polynom_x, coefs)
+                curr_vel = vel
                 if vel < 0.05:
                     vel = 0
-                vel = min(vel, wp.twist.twist.linear.x)
+
             else:
-                vel = wp.twist.twist.linear.x
+                vel = 0
 
             p.twist.twist.linear.x = vel
             # sys.stderr.write('Twist: dist={}, vel={}, final={} \n'.format(dist, vel, p.twist.twist.linear.x))
@@ -196,7 +201,7 @@ class WaypointUpdater(object):
                          end[2] - start[2]])
 
 
-        x = np.linalg.solve(a, b)
+        x = np.linalg.lstsq(a, b)[0]
         # for xi in x:
         #     print("{:.6f}".format(xi.item()))
         return [start[0], start[1], start[2], x[0], x[1], x[2]]
